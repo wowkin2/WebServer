@@ -83,4 +83,15 @@ typedef struct _Request
     char* filePath;
 }Request;
 
+enum mime_types{
+    HASH_HTM,
+    HASH_HTML,
+    HASH_CSS,
+    HASH_JS,
+    HASH_PNG,
+    HASH_JPEG,
+    HASH_JPG,
+    HASH_ICO,
+    HASH_GIF,
+};
 #endif

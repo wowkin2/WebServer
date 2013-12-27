@@ -1,12 +1,19 @@
+#ifndef __SERVER_C__
+#define  __SERVER_C__
 #include "server.h"
 
 /*********************
-@purpose: log each error in server work
-@TODO
+@purpose: log each error or just system message in server work
+@input: message to be written in file
 *********************/
 void logError(char *Caption){
     char sendBuff[BUFF_LEN] = {0};
-    
+    /*// Open temporary log file
+    if ( !( fileLogTmp  = openFile("error.log") ) )
+    {
+        printf("Could not open '%s'!", "error.log");
+        return 1;
+    }*/
     FILE *fptr = fopen("log/error.log", "a+");
     fseek(fptr, 0, SEEK_END);
     
@@ -18,7 +25,7 @@ void logError(char *Caption){
 }
 /*********************
 @purpose: log each connection to server
-@TODO
+@input: IP of connection; request to be logged
 *********************/
 void logAccess(char *IP, Request *req){
     char sendBuff[BUFF_LEN] = {0};
@@ -156,16 +163,16 @@ Request* parseRequest(char *request){
     char protocol[255];
     
     sscanf (request, "%s %s %s", method, url, protocol);
-    if (strcmp (method, "GET") == 0) 
+    if (strcmp(method, "GET") == 0) 
     {
         (newReq)->method = METHOD_GET;
-        if (strcmp (protocol, HTTPVersionText[HTTP_V_1_0]) == 0)
+        if (strcmp(protocol, HTTPVersionText[HTTP_V_1_0]) == 0)
         {
             (newReq)->version = HTTP_V_1_0;
             (newReq)->URL = malloc(strlen(url));
             strcpy((newReq)->URL, url);        
         }
-        else if (strcmp (protocol, HTTPVersionText[HTTP_V_1_1]) == 0) 
+        else if (strcmp(protocol, HTTPVersionText[HTTP_V_1_1]) == 0) 
         {
             (newReq)->version = HTTP_V_1_1;
             (newReq)->URL = malloc(strlen(url));
@@ -223,6 +230,7 @@ char *getPathByVHost(char *vhost)
 }
 char *GetFileTypeHeader(char *URL)
 {
+    int hash = 0;
     // get right part (extension) of url (file name, without params)
     // get hash of extension
     switch (hash)
@@ -251,9 +259,10 @@ char *GetFileTypeHeader(char *URL)
             
         break;
 
-        default:
+        //default:
             
     }
+    return "";
 }
 /*********************
 @purpose: send answer chunk by chunk (if needed)
@@ -280,8 +289,7 @@ void sendAnswer(int connfd, Request* answ){
     
     snprintf(sendBuff, sizeof(sendBuff), 
         "%s %s\n%s\n", HTTP_Ver, ResponseText[answ->status], 
-        "" GetFileTypeHeader(answ->URL)
-        /*a==0?pngHead:htmHead*/
+        GetFileTypeHeader(answ->URL) /*a==0?pngHead:htmHead*/
         );
     write(connfd, sendBuff, strlen(sendBuff));
     //\HEADER
@@ -338,7 +346,7 @@ int startServer(int listenPort, int maxConnection){
     listenfd = socket(AF_INET, SOCK_STREAM, 0);
     if ( -1 == listenfd)
     {
-        logError("Error. Can't open Socket!\n");
+        logError("Error. Can't open Socket!");
         close(listenfd);
         return -1;
     }
@@ -348,7 +356,7 @@ int startServer(int listenPort, int maxConnection){
     int status = setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, (const char *) &on, sizeof(on));
     if (-1 == status)
     {
-        logError("Error. Can't set socket option REUSEADDR\n");
+        logError("Error. Can't set socket option REUSEADDR");
     }
     // configure sockaddr_in
     serv_addr.sin_family = AF_INET;
@@ -357,15 +365,16 @@ int startServer(int listenPort, int maxConnection){
     // bind socket
     if ( -1 == bind(listenfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) )
     {
-        logError("Error. Can't BIND!\n");
-        logError(strerror(errno));
+        char ErrBuff[256] = {0};
+        snprintf(ErrBuff, sizeof(ErrBuff), "Error. Can't BIND! %s", strerror(errno));
+        logError(ErrBuff);
         close(listenfd);
         return -2;
     }
     // listen port
     if ( -1 == listen(listenfd, maxConnection) )
     {
-        logError("Error. Can't LISTEN!\n");
+        logError("Error. Can't LISTEN!");
         close(listenfd);
         return -3;
     }
@@ -404,3 +413,5 @@ int startServer(int listenPort, int maxConnection){
     {
         printf("Opening file\n");
     }*/
+    
+#endif

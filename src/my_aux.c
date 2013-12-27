@@ -6,6 +6,76 @@
 #include <string.h>
 #include <time.h> 
 
+/*********************
+@purpose: convert type from string to unsigned integer (string must to start from number)
+@input: string to be converted
+@return: return converted unsigned integer number
+*********************/
+unsigned int a2i(const char* string)
+{
+    unsigned int result = 0;
+    if(!string) return 0;
+
+    while(*string)
+    {
+        if( (*string < '0' || *string> '9') ) break;
+        result = result * 10 + (*string - '0');
+        string++;
+    }
+    return result;
+}
+
+/*********************
+@purpose: to reverse string
+@input: string to be reversed
+@return: reversed string
+@comment: 
+    The function reverse used above is implemented two pages earlier
+    that next - 'itoa' (in book "The C Programming Language")
+*********************/
+void reverse(char *s)
+{
+    int i, j;
+    char c;
+
+    for (i = 0, j = strlen(s)-1; i<j; i++, j--) 
+    {
+        c = s[i];
+        s[i] = s[j];
+        s[j] = c;
+    }
+}
+
+/*********************
+@purpose: convert type from integer to string
+@input: integer to be converted
+@return: return string to buffer 's[]'
+@comment: 
+    The function itoa appeared in the first edition of Kernighan and Ritchie's 
+    "The C Programming Language", on page 60
+*********************/
+void itoa(int n, char s[])
+{
+    int i, sign;
+
+    if ((sign = n) < 0)  // write sign
+        n = -n;          // make positive
+    i = 0;
+    do              // generation cyphers in reverse
+    {       
+        s[i++] = n % 10 + '0';   // get next cypher
+    } while ((n /= 10) > 0);     // remove it
+    if (sign < 0)
+        s[i++] = '-';
+    s[i] = '\0';
+    reverse(s);
+}
+
+/*********************
+@purpose: get file in single byte massive
+@input: full file path
+@return: pointer to byte massive with file content
+*********************/
 char* getTempl(char *fileName){
     if (fileName == 0) return 0;
     if (strlen(fileName) == 0) return 0;
@@ -22,7 +92,7 @@ char* getTempl(char *fileName){
     string[fsize] = 0;
     return string;
 }
-
+/*
 int getTempl2(char *fileName, char **outBuff){
     if (fileName == 0) return 0;
     if (strlen(fileName) == 0) return 0;
@@ -55,7 +125,7 @@ char* getTempl1(int connfd, char *fileName){
 
     string[fsize] = 0;
     return string;
-}
+}*/
 
 /*********************
 @purpose: generate time string
