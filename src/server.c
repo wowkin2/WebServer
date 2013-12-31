@@ -1,233 +1,26 @@
 #ifndef __SERVER_C__
 #define  __SERVER_C__
 #include "server.h"
+#include "log.c"
 
-/*********************
-@purpose: log each error or just system message in server work
-@input: message to be written in file
-*********************/
-void logError(char *Caption){
-    char sendBuff[BUFF_LEN] = {0};
-    /*// Open temporary log file
-    if ( !( fileLogTmp  = openFile("error.log") ) )
-    {
-        printf("Could not open '%s'!", "error.log");
-        return 1;
-    }*/
-    FILE *fptr = fopen("log/error.log", "a+");
-    fseek(fptr, 0, SEEK_END);
-    
-    memset(sendBuff, 0, sizeof(sendBuff));
-    snprintf(sendBuff, sizeof(sendBuff), "[%s] \"%s\"\n", getTimeS(), Caption);
-    fwrite (sendBuff , sizeof(char), strlen(sendBuff), fptr);
-    
-    fclose(fptr);
-}
-/*********************
-@purpose: log each connection to server
-@input: IP of connection; request to be logged
-*********************/
-void logAccess(char *IP, Request *req){
-    char sendBuff[BUFF_LEN] = {0};
-    
-    FILE *fptr = fopen("log/access.log", "a+");
-    fseek(fptr, 0, SEEK_END);
-    
-    memset(sendBuff, 0, sizeof(sendBuff));
-    snprintf(sendBuff, sizeof(sendBuff), 
-            "%s [%s] \"%s %s %s\" %d  %d\n", 
-            IP, getTimeS(), 
-            RequestMethodText[req->method], req->URL, HTTPVersionText[req->version], 
-            ResponseCode[req->status], 0/*strlen(req->data)*/
-            );
-            
-    fwrite (sendBuff , sizeof(char), strlen(sendBuff), fptr);
-    
-    fclose(fptr);
-}
+static char *defaultPage = 0;
+static char *rootFolder = 0;
 
-/*********************
-@purpose: start to send file
-@input: buff to save data, filename to be read, seekValue offset of file begining
-@return: length of readed buffer
-@defaults: seekValue = 0
-*********************/
-int getFileChunk(char *buff, char *fileName, ULI seekValue, ULI sizeValue){
-    if (fileName == 0) return -1;
-    if (strlen(fileName) == 0) return -1;
-    
-    FILE *fptr = fopen(fileName, "rb");
-    
-    fseek(fptr, 0, SEEK_END);
-    long fsize = ftell(fptr);
-    
-    if (seekValue > fsize) return -2;
-    fsize = fsize - seekValue;
-    
-    if (fsize > CHUNK_SIZE)
-    fsize = CHUNK_SIZE;
-    
-    fseek(fptr, seekValue, SEEK_SET);
-
-    buff = malloc(fsize + 1);
-    fread(buff, fsize, 1, fptr);
-    fclose(fptr);
-    
-    return fsize;
-}
-/*********************
-@purpose: receive data from socket
-@input: connection handle, buffer to save data
-*********************/
-int recvRequest(int connfd, char **recvBuff){
-
-    return getData(connfd, recvBuff);
-
-
-    int size_recv , total_size= 0;
-    struct timeval begin , now;
-    char chunk[CHUNK_SIZE];
-    double timediff;
-    
-    //if (recvBuff != NULL) free(recvBuff);
-    *recvBuff=malloc(0);
-    
-    fcntl(connfd, F_SETFL, O_NONBLOCK);
-     
-    // beginning time
-    gettimeofday(&begin , NULL);     
-    while(1)
-    {
-        gettimeofday(&now , NULL);         
-        // time elapsed in seconds
-        timediff = (now.tv_sec - begin.tv_sec) + 1e-6 * (now.tv_usec - begin.tv_usec);
-
-        if( total_size > 0 && timediff > RECV_TIMEOUT )
-        {
-            break;  // break after timeout, even if got some data
-        }
-        else if( timediff > RECV_TIMEOUT*2)
-        {
-            break;  // break twice timeout, even if got no data
-        }
-         
-        memset(chunk ,0 , CHUNK_SIZE);  //clear the variable
-        if((size_recv =  recv(connfd, chunk , CHUNK_SIZE , 0) ) < 0)
-        {
-            // if nothing was received then we want to wait a little before trying again, 0.1 seconds
-            usleep(100000);
-        }
-        else
-        {
-            *recvBuff = realloc(*recvBuff, (total_size + size_recv)*sizeof(char));
-            memcpy(recvBuff + total_size, chunk, size_recv);
-            
-            total_size += size_recv;
-            // reset beginning time
-            gettimeofday(&begin , NULL);
-        }
-    }
-    
-    return total_size;
-}
-int getData(int connfd, char **outBuff)
+/*******************************************************************************
+@purpose: create full path concating 'rootFolder' and 'someURL'
+@input: relative of www-folder path 
+@output: absolute file path
+*******************************************************************************/
+char *getFullPath(char *URL)
 {
-    char recvBuff[BUFF_LEN] = {0};
-    if( recv(connfd, recvBuff, BUFF_LEN , 0) < 0)
-    {
-        //logError("Error in recv request!");
-    }
-    *outBuff = malloc(strlen(recvBuff));
-    //strcpy(*outBuff, recvBuff);
-    memcpy(*outBuff, recvBuff, strlen(recvBuff));
-    memset(*outBuff + strlen(recvBuff), '\0', 1);
-    return strlen(recvBuff);
+    char *tmp = malloc(strlen(rootFolder)+strlen(URL)+1);
+    strcpy(tmp, rootFolder);
+    strcat(tmp, URL);
+    return tmp;
 }
-/*********************
-@purpose: parse request 
-@input: connection handle, buffer to save data
-*********************/
-Request* parseRequest(char *request){
-    Request* newReq = malloc(sizeof(Request));
-    //newReq = malloc(sizeof(Request*));
-    //*newReq = malloc(sizeof(Request));
-    memset(newReq, 0, sizeof(Request));
-    
-    if (request == NULL) (newReq)->status = PROCESS_ERROR;
-    else if (strlen(request)<14) (newReq)->status = PROCESS_ERROR; // 14 == strlen("GET / HTTP/x.x")
-    
-    if ((newReq)->status == PROCESS_ERROR) return (newReq);
-    
-    char method[255];
-    char url[255];
-    char protocol[255];
-    
-    sscanf (request, "%s %s %s", method, url, protocol);
-    if (strcmp(method, "GET") == 0) 
-    {
-        (newReq)->method = METHOD_GET;
-        if (strcmp(protocol, HTTPVersionText[HTTP_V_1_0]) == 0)
-        {
-            (newReq)->version = HTTP_V_1_0;
-            (newReq)->URL = malloc(strlen(url));
-            strcpy((newReq)->URL, url);        
-        }
-        else if (strcmp(protocol, HTTPVersionText[HTTP_V_1_1]) == 0) 
-        {
-            (newReq)->version = HTTP_V_1_1;
-            (newReq)->URL = malloc(strlen(url));
-            strcpy((newReq)->URL, url);
-        }
-        else
-        {
-            (newReq)->status = R_400_BAD_REQUEST;
-        }
-    }
-    else
-    {
-        (newReq)->status = R_501_BAD_METHOD;
-    }
-    (newReq)->status = R_200_OK;
-    return (newReq);
-}
-/*********************
-@purpose: Proccess one request to generate answer
-@input: request string (ex. "GET /index.htm HTTP/1.0\nHostname: example.com\n\n"
-@return: answer to be sent
-*********************/
-Request* procRequest(Request* req){
-    //answ = malloc(sizeof(Request*));
-    Request *answ = malloc(sizeof(Request));
-    memset(answ, 0, sizeof(Request));
-    
-    if (req == NULL) (answ)->status = -1;
-    else if (req->status != PROCESS_ERROR) (answ)->status = -2;
-    
-    //check URL
-    if (req->URL == NULL) (answ)->status = -3;
-    else if (strlen(req->URL)<12) (answ)->status = -4; // 14 == strlen("HTTP/x.x ddd")
-    
-    //printf("\n%s %s %s %s\n", HTTP_Ver, req->method == 0 ? "GET":"???", req->URL, ResponseText[req->status]);
-
-    answ->method = METHOD_GET;
-    answ->status = R_200_OK;
-    if (strcmp(req->URL, "/") == 0)
-    {
-        answ->URL = malloc(strlen("index.htm"));
-        strcpy(answ->URL, "index.htm");
-    }
-    else
-    {
-        answ->URL = malloc(strlen(req->URL)-1);
-        strcpy(answ->URL, (req->URL)+1);
-    }
-    return (answ);
-
-}
-char *getPathByVHost(char *vhost)
-{
-    return "www/";
-}
+/*******************************************************************************
+@purpose: 
+*******************************************************************************/
 char *GetFileTypeHeader(char *URL)
 {
     int hash = 0;
@@ -264,84 +57,243 @@ char *GetFileTypeHeader(char *URL)
     }
     return "";
 }
-/*********************
-@purpose: send answer chunk by chunk (if needed)
-@input: connection handle, answer block
-*********************/
-void sendAnswer(int connfd, Request* answ){
-    char sendBuff[BUFF_LEN] = {0};
-    if (answ == NULL) printf("asnw if NULL\n");
-    else if (answ->URL == NULL) printf("URL is NULL\n");
+/*******************************************************************************
+@purpose: start to send file
+@input: buff to save data, filename to be read, seekValue offset of file begining
+@return: length of readed buffer
+@defaults: seekValue = 0
+*******************************************************************************/
+/*int getFileChunk(char *buff, char *fileName, ULI seekValue, ULI sizeValue){
+    if (fileName == 0) return -1;
+    if (strlen(fileName) == 0) return -1;
     
-    //HEADER
-    char *pngHead =
-        "Connection: close\n"
-        "Content-Type: image/png\n"
-        "Content-Transfer-Encoding: binary\n"
-        "Content-Length: 2373\n\n";
-    char *htmHead =
-        "Content-Type: text/html; charset=UTF-8\n\n";
-    int a = 1;
-    if (strcmp(answ->URL, "somelogo.png") == 0)
+    FILE *fptr = fopen(fileName, "rb");
+    
+    fseek(fptr, 0, SEEK_END);
+    long fsize = ftell(fptr);
+    
+    if (seekValue > fsize) return -2;
+    fsize = fsize - seekValue;
+    
+    if (fsize > CHUNK_SIZE)
+    fsize = CHUNK_SIZE;
+    
+    fseek(fptr, seekValue, SEEK_SET);
+
+    buff = malloc(fsize + 1);
+    fread(buff, fsize, 1, fptr);
+    fclose(fptr);
+    
+    return fsize;
+}*/
+
+#ifndef __FUNCTION_MODE__
+void handleRequest(int connfd){
+#else
+/*******************************************************************************
+@purpose: receive data from socket
+@input: connection handle, buffer to save data
+*******************************************************************************/
+int recvRequest(int connfd, char **outBuff){
+#endif
+    char recvBuff[BUFF_LEN] = {0};
+    int len = recv(connfd, recvBuff, BUFF_LEN , 0);
+    if( len < 0)
     {
-        a = 0;
+        logError("Error. Recv an empty request!");
     }
     
+#ifdef __FUNCTION_MODE__
+    *outBuff = malloc(len);
+    memcpy(*outBuff, recvBuff, len);
+    memset(*outBuff + len, '\0', 1);
+    return len;
+}
+/*******************************************************************************
+@purpose: parse request 
+@input: connection handle, buffer to save data
+*******************************************************************************/
+Request* parseRequest(char *recvBuff){
+#endif
+    Request* req = malloc(sizeof(Request));
+    memset(req, 0, sizeof(Request));   // here: 'req->status' is set to 'R_200_OK'
+    
+    // Check if request is valid
+    if (recvBuff == NULL) req->status = R_500_SERVER_ERROR;
+    else if (strlen(recvBuff)<14) req->status = R_400_BAD_REQUEST; // 14 == strlen("GET / HTTP/x.x")
+    if (req->status == PROCESS_ERROR) return req;
+    
+    // Parse request to separate fields
+    char method[255];
+    char url[255];
+    char protocol[255];
+    sscanf (recvBuff, "%s %s %s", method, url, protocol);
+    
+    if (strcmp(method, "GET") == 0) // Check if method is supported
+    {
+        req->method = METHOD_GET;
+        req->status = R_505_BAD_HTTP_VERSION;
+        // Check HTTP version
+        if (strcmp(protocol, HTTPVersionText[HTTP_V_1_0]) == 0)
+        {
+            req->version = HTTP_V_1_0;
+            req->status = R_200_OK;
+        }
+        else if (strcmp(protocol, HTTPVersionText[HTTP_V_1_1]) == 0) 
+        {
+            req->version = HTTP_V_1_1;
+            req->status = R_200_OK;
+        }
+        // Parse other parts of request
+        if (req->status != R_505_BAD_HTTP_VERSION)
+        {
+            // parse url
+            req->URL = malloc(strlen(url));
+            strcpy(req->URL, url);
+            
+            // TODO: parse other parameters from request
+        }
+    }
+    // Now only GET is supporting
+    else
+    {
+        req->status = R_501_BAD_METHOD;
+    }
+#ifdef __FUNCTION_MODE__
+    return req;
+}
+/*******************************************************************************
+@purpose: Proccess one request to generate answer
+@input: request string (ex. "GET /index.htm HTTP/1.0\nHostname: example.com\n\n")
+@return: answer to be sent
+*******************************************************************************/
+Request* procRequest(Request* req){
+#endif
+    Request *answ = malloc(sizeof(Request));
+    memset(answ, 0, sizeof(Request));   // here: 'answ->status' is set to 'R_200_OK'
+    
+    if (req == NULL) answ->status = R_500_SERVER_ERROR;
+    else if (req->status == PROCESS_ERROR) puts("Ooopss1"); //answ->status = R_500_SERVER_ERROR;
+    
+    //check URL
+    else if (req->URL == NULL) puts("Ooopss2"); //answ->status = R_500_SERVER_ERROR;
+    
+    answ->method = METHOD_GET;      //TODO check if we need this line
+    answ->version = req->version;
+    if ( answ->status == R_200_OK ) // R_200_OK was set as default value, can be changed on errors
+    {
+        // change page to default if host root is requested
+        char *tmp = defaultPage;
+        if (strcmp(req->URL, "/") != 0)
+        {
+            tmp = req->URL;
+        }
+        answ->URL = malloc(strlen(tmp));
+        strcpy(answ->URL, tmp+1);
+        
+        // check if file is found
+        char *fullPath = malloc(strlen(rootFolder)+strlen(answ->URL)+1);
+        strcpy(fullPath, rootFolder);
+        strcat(fullPath, answ->URL);
+        if ( fileExists(fullPath) != 0)
+        {
+            answ->status = R_404_NOT_FOUND;
+        }
+        
+        // check if client has permissions to file
+        if (0 /* TODO Security */)
+        {
+            answ->status = R_403_FORBIDDEN;
+        }
+    }
+#ifdef __FUNCTION_MODE__
+    return answ;
+
+}
+/*******************************************************************************
+@purpose: send answer chunk by chunk (if needed)
+@input: connection handle, answer block
+*******************************************************************************/
+void sendAnswer(int connfd, Request* answ){
+    char *fullPath = 0;
+#endif
+    char sendBuff[BUFF_LEN] = {0};
+    char errorFlag = 0;
+    
+    // Check if answer was generated
+    if (answ == NULL) errorFlag = 1;
+    else if (answ->URL == NULL) answ->status = R_500_SERVER_ERROR;
+    // Check if can send
+    
+    //HEADER
     snprintf(sendBuff, sizeof(sendBuff), 
-        "%s %s\n%s\n", HTTP_Ver, ResponseText[answ->status], 
-        GetFileTypeHeader(answ->URL) /*a==0?pngHead:htmHead*/
-        );
+                "%s %s\n%s\n", 
+                HTTPVersionText[answ->version], 
+                ResponseText[answ->status], 
+                GetFileTypeHeader(answ->URL)
+            );
     write(connfd, sendBuff, strlen(sendBuff));
     //\HEADER
     //BODY
-    char *rootPath = getPathByVHost("localhost");
-    char *fullPath = malloc(strlen(rootPath)+strlen(answ->URL)+1);
-    strcpy(fullPath, rootPath);
-    strcat(fullPath, answ->URL);
-    /*snprintf(sendBuff, sizeof(sendBuff), getTempl(fullPath), getTimeS());
-    printf("---------------------------\n%s", sendBuff);*/
-    
-    //char *pa = getTempl1(connfd, fullPath);
-    FILE *f = fopen(fullPath, "rb");
-    fseek(f, 0, SEEK_END);
-    long fsize = ftell(f);
-    fseek(f, 0, SEEK_SET);
+    if ( answ->status == R_200_OK )
+    {
+        // get full path
+        fullPath = malloc(strlen(rootFolder)+strlen(answ->URL)+1);
+        strcpy(fullPath, rootFolder);
+        strcat(fullPath, answ->URL);
+        // open file and get it size
+        FILE *f = fopen(fullPath, "rb");
+        /*fseek(f, 0, SEEK_END);
+        long fsize = ftell(f);
+        fseek(f, 0, SEEK_SET);*/
 
-    char *buff = malloc(fsize);
-    fread(buff, 1, fsize, f);
-    fclose(f);
-    write(connfd, buff, fsize);
-    free(buff);
+        char buff[BUFF_LEN];
+        unsigned int tmpSize = 0;
+        
+        while(!feof(f)){
+            tmpSize = fread(buff, 1, BUFF_LEN, f);
+            write(connfd, buff, tmpSize);
+        }        
+        fclose(f);
+    }
     //\BODY
 }
-/*********************
+/*******************************************************************************
 @purpose: Proccess one connection after 'accept'
 @input: connection handle
-*********************/
+*******************************************************************************/
 void procConn(char *IP, int connfd){
     char *recvBuff = 0;
-    Request* req = 0;
+    Request* req  = 0;
     Request* answ = 0;
+    int i;
     do
     {
-        recvRequest(connfd, &recvBuff);
-        req = parseRequest(recvBuff);
-        logAccess(IP, req);
-        answ= procRequest(req);
-        sendAnswer(connfd, answ);
+        #ifdef __FUNCTION_MODE__
+            recvRequest(connfd, &recvBuff); // receive request
+            req = parseRequest(recvBuff);   // parse them into structure
+            answ= procRequest(req);         // generate answer
+            logAccess(IP, req);             // write into log about request and answer
+            //logAccess(IP, answ);             // write into log about request and answer
+            sendAnswer(connfd, answ);       // send back answer
+        #else
+            handleRequest(connfd);
+        #endif
         
     } while(0/*req->keepAlive != 0*/ /*&& timeDiff < KEEP_ALIVE_TIMEOUT*/);
-    close(connfd);
+    //close(connfd);
 }
 
-/*********************
+/*******************************************************************************
 @purpose: Init listening of server 
 @input: port to listen, maximum simultaneous connections
 @return: listen socket handle
-*********************/
-int startServer(int listenPort, int maxConnection){
+*******************************************************************************/
+int startServer(char* interfaceToListen, int listenPort, int maxConnection){
+    char ErrBuff[BUFF_LEN] = {0};
     int listenfd = 0;
     struct sockaddr_in serv_addr; 
+
     // create socket
     listenfd = socket(AF_INET, SOCK_STREAM, 0);
     if ( -1 == listenfd)
@@ -351,6 +303,7 @@ int startServer(int listenPort, int maxConnection){
         return -1;
     }
     memset(&serv_addr, '0', sizeof(serv_addr));
+    #ifndef __RELEASE__
     // set socket opt - REUSEADDR
     int on = 1;
     int status = setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, (const char *) &on, sizeof(on));
@@ -358,19 +311,24 @@ int startServer(int listenPort, int maxConnection){
     {
         logError("Error. Can't set socket option REUSEADDR");
     }
+    #endif
+
     // configure sockaddr_in
     serv_addr.sin_family = AF_INET;
-    serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    serv_addr.sin_addr.s_addr = (
+            interfaceToListen == 0 ? htonl(INADDR_ANY): inet_addr(interfaceToListen) 
+        );
     serv_addr.sin_port = htons(listenPort); 
+
     // bind socket
     if ( -1 == bind(listenfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) )
     {
-        char ErrBuff[256] = {0};
         snprintf(ErrBuff, sizeof(ErrBuff), "Error. Can't BIND! %s", strerror(errno));
         logError(ErrBuff);
         close(listenfd);
         return -2;
     }
+
     // listen port
     if ( -1 == listen(listenfd, maxConnection) )
     {
@@ -378,40 +336,16 @@ int startServer(int listenPort, int maxConnection){
         close(listenfd);
         return -3;
     }
-    char printBuff[BUFF_LEN];
-    memset(printBuff, 0, sizeof(printBuff));
-    snprintf(printBuff, sizeof(printBuff), 
-            "Server started: Listening %d port with %d simultaneous connections...", 
-            listenPort, maxConnection);
-    logError(printBuff);
-    printf("\n\n%s\n\n", printBuff);
+
+    // print that server was started
+    memset(ErrBuff, 0, sizeof(ErrBuff));
+    snprintf(ErrBuff, sizeof(ErrBuff), 
+            "Server started and listening up to %d simultaneous connections on:\n%s:%d", 
+            maxConnection, interfaceToListen, listenPort);
+    #ifndef __DEBUG_MODE__
+    logError(ErrBuff);
+    #endif
+    printf("\n\n%s\n\n", ErrBuff);
     return listenfd;
 }
-/*ULI fsize = 2373;   //getFileSize(fullPath);
-    char *fileBuff = 0;
-    
-    FILE *f = fopen(fullPath, "rb");
-    
-    fileBuff = malloc(fsize + 1);
-    ULI result = fread(fileBuff, 1, fsize, f);
-    if (result != fsize) printf("Error\n");
-    
-    fclose(f);*/
-
-    // open the file
-    /*FILE *f;
-    unsigned char buffer[1024];
-    int n;
-
-    f = fopen(fullPath, "rb");
-    if (f)
-    {
-        n = fread(buffer, 1024, 1, f);
-        write(connfd, buffer, n);
-    }
-    else
-    {
-        printf("Opening file\n");
-    }*/
-    
 #endif

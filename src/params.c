@@ -13,12 +13,11 @@ typedef struct Map
 }Params;
 #include "list.c"           //this include must be after this typedef
 
-
-/*********************
+/*******************************************************************************
 @purpose: get integer parameter from list, on error return default value
 @input: list, key for search, default value that returns if key is not set
 @return: value by key from list
-*********************/
+*******************************************************************************/
 inline int getParamInt(List* list, char *key, int defValue)
 {
     int tmp = a2i(getNodeValue(list, key));
@@ -27,11 +26,12 @@ inline int getParamInt(List* list, char *key, int defValue)
     else
         return tmp;
 }
-/*********************
+
+/*******************************************************************************
 @purpose: get string parameter from list, on error return default value
 @input: list, key for search, default value that returns if key is not set
 @return: value by key from list
-*********************/
+*******************************************************************************/
 inline char* getParamS(List* list, char *key, char* defValue)
 {
     char *tmp = getNodeValue(list, key);
@@ -40,11 +40,12 @@ inline char* getParamS(List* list, char *key, char* defValue)
     else
         return tmp;
 }
-/*********************
+
+/*******************************************************************************
 @purpose: get string parameter from file and set them to MAP(key, value)
 @input: full file path, list to be set, delimiter between key and value in file
 @return: 0 - if everything is OK; 1 - if can't open file; 2 - if file contain errors
-*********************/
+*******************************************************************************/
 int getParamsFromFile(const char*fileName, List *lst, char delimiter)
 {
     FILE *ptrFileIn;

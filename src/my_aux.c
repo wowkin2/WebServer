@@ -6,11 +6,11 @@
 #include <string.h>
 #include <time.h> 
 
-/*********************
+/*******************************************************************************
 @purpose: convert type from string to unsigned integer (string must to start from number)
 @input: string to be converted
 @return: return converted unsigned integer number
-*********************/
+*******************************************************************************/
 unsigned int a2i(const char* string)
 {
     unsigned int result = 0;
@@ -25,14 +25,14 @@ unsigned int a2i(const char* string)
     return result;
 }
 
-/*********************
+/*******************************************************************************
 @purpose: to reverse string
 @input: string to be reversed
 @return: reversed string
 @comment: 
     The function reverse used above is implemented two pages earlier
     that next - 'itoa' (in book "The C Programming Language")
-*********************/
+*******************************************************************************/
 void reverse(char *s)
 {
     int i, j;
@@ -46,14 +46,14 @@ void reverse(char *s)
     }
 }
 
-/*********************
+/*******************************************************************************
 @purpose: convert type from integer to string
 @input: integer to be converted
 @return: return string to buffer 's[]'
 @comment: 
     The function itoa appeared in the first edition of Kernighan and Ritchie's 
     "The C Programming Language", on page 60
-*********************/
+*******************************************************************************/
 void itoa(int n, char s[])
 {
     int i, sign;
@@ -71,11 +71,11 @@ void itoa(int n, char s[])
     reverse(s);
 }
 
-/*********************
+/*******************************************************************************
 @purpose: get file in single byte massive
 @input: full file path
 @return: pointer to byte massive with file content
-*********************/
+*******************************************************************************/
 char* getTempl(char *fileName){
     if (fileName == 0) return 0;
     if (strlen(fileName) == 0) return 0;
@@ -127,10 +127,10 @@ char* getTempl1(int connfd, char *fileName){
     return string;
 }*/
 
-/*********************
+/*******************************************************************************
 @purpose: generate time string
 @return: return time in string W3C format
-*********************/
+*******************************************************************************/
 char* getTimeS(){
     char *tmpTime = (char*) malloc ( 30 );
     
@@ -142,11 +142,11 @@ char* getTimeS(){
     strftime (tmpTime, 30, "%d/%h/%G:%T %z", timeinfo);
     return tmpTime;
 }
-/*********************
+/*******************************************************************************
 @purpose: compare N symbols of two strings
 @input: string1, string2 and N of symbols to be compared
 @return: return -1 if equal
-*********************/
+*******************************************************************************/
 int strcmpn(char *ptr1, char *ptr2, int n){
     int i;
     for (i = 0; i < n; i++)
@@ -157,10 +157,11 @@ int strcmpn(char *ptr1, char *ptr2, int n){
        }
     return -1;
 }
-/*********************
+#ifdef __DEBUG_MODE__
+/*******************************************************************************
 @purpose: Get command from file after each connection
 @return: 0 if command == shutdown
-*********************/
+*******************************************************************************/
 int getComm(){
     FILE *ptrFileIn;
     char buff[255];
@@ -174,12 +175,12 @@ int getComm(){
     fclose(ptrFileIn);
     return strcmp(buff, "shutdown\n");
 }
-
-/*********************
+#endif
+/*******************************************************************************
 @purpose: get size of file
 @input: string with file path
 @return: return file size in bytes
-*********************/
+*******************************************************************************/
 unsigned long getFileSize(char *fileName){
     if (fileName == 0) return -1;
     if (strlen(fileName) == 0) return -1;
@@ -190,6 +191,22 @@ unsigned long getFileSize(char *fileName){
     fsize = ftell(f);
     fclose(f);
     return fsize;
+}
+
+/*******************************************************************************
+@purpose: check if file exists
+@input: string with file path
+@return: return true(0) if exist and false(1) if not
+*******************************************************************************/
+int fileExists(const char *fpath)
+{
+    FILE *file;
+    if (file = fopen(fpath, "r"))
+    {
+        fclose(file);
+        return 0;
+    }
+    return 1;
 }
 
 #endif

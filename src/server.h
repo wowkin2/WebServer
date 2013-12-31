@@ -1,6 +1,10 @@
 #ifndef __SERVER_H__
 #define __SERVER_H__
-
+//###################
+#define __DEBUG_MODE__
+#define __FUNCTION_MODE__
+// #define __RELEASE__
+//###################
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -26,27 +30,47 @@
 #define RECV_TIMEOUT 10
 #define KEEP_ALIVE_TIMEOUT 5
 
-const char *HTTP_Ver = "HTTP/1.1";
+/**************************************  HTTP STATUS CODE  ********************/
 const char *ResponseText[] = {
-    "200 OK",
-    "400 Bad Request",
-    "404 Not Found",
-    "501 Method Not Implemented"
+// 1xx: Informational
+// 2xx: Success 
+    "200 OK",              // correctly processed
+// 3xx: Redirection
+    "304 Not Modified",    // will send if client use 'If-Modified-Since' (will be used sometime)
+// 4xx: Client Error
+    "400 Bad Request",     // syntax error in request
+    "403 Forbidden",       // access to this resource is denied
+    "404 Not Found",       // no such file or resource
+    "408 Request Timeout", // if there is no connection for a long time
+    "414 Request-URL Too Long", // if request URL is too long, TODO: need to check in RFC
+// 5xx: Server Error
+    "500 Internal Server Error",    // other server error 
+    "501 Method Not Implemented",   // unknown method (for current server all except GET)
+    "503 Service Unavailable",      // server can't correctly handle requests
+    "505 HTTP Version Not Supported"// unknown HTTP version number 
 };
 const int ResponseCode[] = {
     200,
-    400,
-    404,
-    501
+    304, 
+    400, 403, 404, 408, 414,
+    500, 501, 503, 505
 };
 typedef enum _ResponseStatus{
     PROCESS_ERROR = -1,
     R_200_OK,
+    R_304_NOT_MODIFIED,
     R_400_BAD_REQUEST,
-    R_404_NOT_FOUND,
-    R_501_BAD_METHOD
+    R_403_FORBIDDEN,
+    R_404_NOT_FOUND,            
+    R_408_TIMEOUT,
+    R_414_TOO_LONG_URL,
+    R_500_SERVER_ERROR,
+    R_501_BAD_METHOD,
+    R_503_SERVICE_UNAVAILABLE,
+    R_505_BAD_HTTP_VERSION
 }ResponseStatus;
 
+/**************************************  METHODS  *****************************/
 const char *RequestMethodText[] = {
     "GET",
     //"POST",
@@ -55,9 +79,10 @@ const char *RequestMethodText[] = {
 typedef enum _RequestMethod{
     METHOD_GET,
     //METHOD_POST,
-    //METHOD_...,l
+    //METHOD_...,
 }RequestMethod;
 
+/**************************************  VERSIONS  ****************************/
 const char *HTTPVersionText[] = {
     "HTTP/0.9",
     "HTTP/1.0",
@@ -68,6 +93,8 @@ typedef enum _HTTPVersion{
     HTTP_V_1_0,
     HTTP_V_1_1,
 }HTTPVersion;
+
+/**************************************  REQUEST STRUCTURE  *******************/
 typedef struct _Request
 {
     RequestMethod method; // GET
@@ -83,15 +110,17 @@ typedef struct _Request
     char* filePath;
 }Request;
 
+/**************************************  MIME TYPES  **************************/
 enum mime_types{
     HASH_HTM,
     HASH_HTML,
     HASH_CSS,
     HASH_JS,
+    HASH_ICO,
     HASH_PNG,
     HASH_JPEG,
     HASH_JPG,
-    HASH_ICO,
     HASH_GIF,
 };
+/******************************************************************************/
 #endif
