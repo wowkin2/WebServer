@@ -27,8 +27,8 @@
 #define BUFF_LEN 1025
 #define CHUNK_SIZE 1025
 
-#define RECV_TIMEOUT 10
-#define KEEP_ALIVE_TIMEOUT 5
+#define RECV_TIMEOUT 10         // wait x-seconds any connections, else continue
+#define KEEP_ALIVE_TIMEOUT 5    // wait x-seconds any requests to dedicated socket, else close socket
 
 /**************************************  HTTP STATUS CODE  ********************/
 const char *ResponseText[] = {
@@ -101,10 +101,12 @@ typedef struct _Request
     char* URL;            // /index.htm
     UCHAR version;        // HTTP/1.x
     ResponseStatus status;// OK
-    //char**variables;    // key: value
-    char* host;           // Host: localhost.com
-    UCHAR keepAlive;      // Connection: Keep-Alive
-                          // Ranges
+    
+    void* lst;            // pointer to 'List' type (void because List is undefined here)
+                          // key: value
+                          // Host: localhost.com
+                          // Connection: Keep-Alive/Closed
+                          // Ranges: 
     //CRLF+CRLF
     char* data; //or
     char* filePath;

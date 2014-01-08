@@ -1,1 +1,2 @@
 #to stop leave "shutdown" only
+shutdown

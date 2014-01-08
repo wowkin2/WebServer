@@ -94,5 +94,38 @@ int getParamsFromFile(const char*fileName, List *lst, char delimiter)
     fclose(ptrFileIn);
     return 0;
 }
+/*******************************************************************************
+@purpose: get string parameter from file and set them to MAP(key, value)
+@input: full file path, list to be set, delimiter between key and value in file
+@return: 0 - if everything is OK; 1 - if can't open file; 2 - if file contain errors
+*******************************************************************************/
+int getParamsFromString(char *str, List *lst, char delimiter)
+{
+    char *buff = 0;
+    char *ptrDelim = 0;
+    unsigned int trimCnt = 0;
 
+    if (str == NULL) {
+        return 1;
+    }
+    buff = strtok(str, "\n");
+    while(buff != NULL)
+    {
+        ptrDelim = strchr(buff, delimiter);
+        if (ptrDelim)
+        {
+            trimCnt = 0;
+            while(*(ptrDelim + 1 + trimCnt) == 32) trimCnt++; // L_TRIM
+            Params a = {0};
+            a.key = (char *)malloc(ptrDelim - buff + 1);
+            a.val = (char *)malloc(strlen(ptrDelim) - trimCnt); // trimCnt for ltrim 'value'
+            memcpy(a.key, buff, (ptrDelim - buff));
+            *(a.key+(ptrDelim - buff)) = 0;
+            strcpy(a.val, ptrDelim+1  + trimCnt); // to skip delimiter and spaces
+            insertNode(lst, &a);
+        }
+        buff = strtok(NULL, "\n");
+    }
+    return 0;
+}
 #endif

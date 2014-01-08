@@ -52,7 +52,7 @@ void logError(char *Caption){
 @purpose: log each connection to server
 @input: IP of connection; request to be logged
 *******************************************************************************/
-void logAccess(char *IP, Request *req){
+void logAccess(char *IP, Request *req, long responseSize){
     char sendBuff[BUFF_LEN] = {0};
     
     //FILE *fileLogAccess = fopen("log/access.log", "a+");
@@ -60,14 +60,18 @@ void logAccess(char *IP, Request *req){
     
     memset(sendBuff, 0, sizeof(sendBuff));
     snprintf(sendBuff, sizeof(sendBuff), 
-            "%s [%s] \"%s %s %s\" %d  %d\n", 
-            IP, getTimeS(), 
-            RequestMethodText[req->method], req->URL, HTTPVersionText[req->version], 
-            ResponseCode[req->status], 0/*strlen(req->data)*/
+            "%s [%s] \"%s %s %s\" %d %lu\n", 
+            IP, 
+            getTimeS(), 
+            RequestMethodText[req->method], 
+            req->URL, 
+            HTTPVersionText[req->version], 
+            ResponseCode[req->status], 
+            responseSize
             );
             
     fwrite (sendBuff , sizeof(char), strlen(sendBuff), fileLogAccess);
     
-    //fclose(fptr);
+    fclose(fileLogAccess);
 }
 #endif

@@ -14,7 +14,7 @@ Web Server written in pure C in Linux, that can be configurated from file, respo
   ```
   Chunked transfer encoding allows a server to maintain an HTTP persistent 
   connection for dynamically generated content.
-  But in item 8. described that “It is enough to support only static content”.
+  But in item 8. described that "It is enough to support only static content".
   So do we need this option?
   ```
 

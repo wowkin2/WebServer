@@ -35,7 +35,10 @@ typedef struct _List
 
 List *initList()
 {
-    return malloc(sizeof(List));
+    List *l = malloc(sizeof(List));
+    l->lStart = 0;
+    l->lEnd = 0;
+    return l;
 }
 /*******************************************************************************
 *******************************************************************************/
@@ -105,6 +108,7 @@ void removeNode(List* l, node* lElem)
 void removeAll(List* l)
 {
     while(l->lStart) removeNode(l, l->lStart);
+    //free(l);
 }
 /*******************************************************************************
 *******************************************************************************/
@@ -162,3 +166,4 @@ void printAll(List* list)
     }while(tmpList != list->lStart);
 }
 #endif
+

@@ -165,7 +165,7 @@ int strcmpn(char *ptr1, char *ptr2, int n){
 int getComm(){
     FILE *ptrFileIn;
     char buff[255];
-    ptrFileIn = fopen("command.txt", "r");
+    ptrFileIn = fopen("bin/command.txt", "r");
     if (ptrFileIn == NULL) 
     {
         printf("Can't open command file in!\n");

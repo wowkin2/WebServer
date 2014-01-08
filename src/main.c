@@ -15,9 +15,9 @@ int main(int argc, char *argv[])
     char ErrBuff[256] = {0};
     FILE* fileLogTmp;
     //##############  PRINT USAGE  ###############
-    //--i check available interfaces
-    //--t check configuration
-    //--k start/stop/restart
+    //--i (get available interfaces)
+    //--t (check configuration)
+    //--k start/stop/restart (...)
     //
     
     
@@ -33,10 +33,10 @@ int main(int argc, char *argv[])
     // Apply parameters from list (or set to default, if they are absent)
     int port          = getParamInt(lstConf, "portListen",    80);
     int maxConn       = getParamInt(lstConf, "maxConnection", 100);
-    char *logAccessPath = getParamS(lstConf, "logAccess",    "log/access.log");// maybe 
-    char *logErrorPath  = getParamS(lstConf, "logError",     "log/error.log"); //  need 
-    defaultPage         = getParamS(lstConf, "defaultPage",  "/index.htm");    //  to copy 
-    rootFolder          = getParamS(lstConf, "rootFolder",   "www/");          //  values
+    char *logAccessPath = getParamS(lstConf, "logAccess",    "log/access.log");
+    char *logErrorPath  = getParamS(lstConf, "logError",     "log/error.log");
+    defaultPage         = getParamS(lstConf, "defaultPage",  "/index.htm");
+    rootFolder          = getParamS(lstConf, "rootFolder",   "www/");
     char *interface     = getParamS(lstConf, "interfaceToListen", "");
     // Open new log files
     if ( initErrorLog(logErrorPath) == 0 )
@@ -50,13 +50,26 @@ int main(int argc, char *argv[])
         logError(ErrBuff);
         return 1;
     }
-    removeAll(lstConf);     // Free data with configuration from memory
+    // Check if default page exists
+    char *fullPath = malloc(strlen(rootFolder)+strlen(defaultPage)+1);
+    strcpy(fullPath, rootFolder);
+    strcat(fullPath, defaultPage);
+    if (fileExists(fullPath) != 0)
+    {
+        snprintf(ErrBuff, sizeof(ErrBuff), 
+            "Could not find default page following next path: '%s'!",
+            fullPath);
+        puts(ErrBuff);
+        logError(ErrBuff);
+    }
+    // Free data with configuration from memory
+    removeAll(lstConf);     
     
     //#############  START SERVER  ###############
 
     struct sockaddr_in saddr;       // used for getting IP _
     socklen_t len = sizeof( saddr );// of incomming connection _
-    char addr_buf[INET_ADDRSTRLEN]; // defined in <netinet/in.h> .
+    char IP_Buff[INET_ADDRSTRLEN]; // defined in <netinet/in.h> .
 
     int listenSocket = 0, connSocket = 0;
     pid_t child_pid;
@@ -73,7 +86,11 @@ int main(int argc, char *argv[])
         //#############  MAIN PROCESSING LOOP  ###############
         while(1)
         {
-            connSocket = accept( listenSocket, ( struct sockaddr* )&saddr, &len );
+            // Wait few second, if there's no connections - continue
+            if (wait4Accept(listenSocket) > 0)
+            {
+                connSocket = accept( listenSocket, ( struct sockaddr* )&saddr, &len );
+            }
             if ( listenSocket < 0 ) {
                 logError("Accept Error...");
                 close(listenSocket);
@@ -90,12 +107,13 @@ int main(int argc, char *argv[])
                 close (listenSocket);       //close a child-copy of listening port
                 
                 //TODO need to check
-                if ( inet_ntop( AF_INET, &saddr.sin_addr, addr_buf, INET_ADDRSTRLEN ) == NULL )
+                if ( inet_ntop( AF_INET, &saddr.sin_addr, IP_Buff, INET_ADDRSTRLEN ) == NULL )
                 {
-                    logError("Can't convert IP addr"); 
-                    exit(1); 
+                    logError("Can't convert IP addr");
+                    close(connSocket);
+                    exit(1);
                 }
-                procConn(addr_buf, connSocket);
+                procConn(IP_Buff, connSocket);
                 
                 exit (0);       // close child process
             }
@@ -124,6 +142,6 @@ int main(int argc, char *argv[])
         return 0;
     }
     logError("#Server was not started!");
-    printf("\n\nServer was not started!\n\n");
+    printf("\n\nServer was not started! See error.log to get more information!\n\n");
     return 1;
 }
