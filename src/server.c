@@ -40,43 +40,51 @@ inline char *getErrorPage(ResponseStatus status)
     return ptrRet;
 }
 /*******************************************************************************
-@purpose: 
+@purpose: get mime type by file extension
+@input: file path
+@return: string with MIME-type
 *******************************************************************************/
-char *GetFileMimeType(char *URL)
+char* getMimeType(char *URL)
 {
-    int hash = 0;
-    // get right part (extension) of url (file name, without params)
+    char *pStart = strchr(URL,'.');
+    if (pStart == NULL)          // if not found '.' so send default
+        return "text/plain";
+    
     // get hash of extension
+    int hash = getHash(pStart+1);   // +1 to skip '.'
+    
+    // find suitable and return it
     switch (hash)
     {
-        case HASH_HTM:
-        case HASH_HTML:
-            
-        break;
-        case HASH_CSS:
-            
-        break;
-        case HASH_JS:
-            
-        break;
-        case HASH_PNG:
-            
-        break;
+        case HASH_DOC:	return "application/msword";
+        case HASH_PDF:	return "application/pdf";
+        case HASH_XLS:	return "application/vnd.ms-excel";
+        case HASH_PPT:	return "application/vnd.ms-powerpoint";
+        case HASH_JS:	return "application/x-javascript";
+        case HASH_SWF:	return "application/x-shockwave-flash";
+        case HASH_XML:	return "application/xml";
+        case HASH_ZIP:	return "application/zip";
+        case HASH_MP3:	return "audio/mpeg";
+        case HASH_M3U:	return "audio/x-mpegurl";
+        case HASH_WAV:	return "audio/x-wav";
+        case HASH_BMP:	return "image/bmp";
+        case HASH_GIF:	return "image/gif";
         case HASH_JPEG:
-        case HASH_JPG:
-            
-        break;
-        case HASH_ICO:
-            
-        break;
-        case HASH_GIF:
-            
-        break;
-
-        //default:
-            
+        case HASH_JPG:	return "image/jpeg";
+        case HASH_PNG:	return "image/png";
+        case HASH_SVG:	return "image/svg+xml";
+        case HASH_TIFF:
+        case HASH_TIF:	return "image/tiff";
+        case HASH_DJVU:
+        case HASH_DJV:	return "image/vnd.djvu";
+        case HASH_ICO:	return "image/x-icon";
+        case HASH_CSS:	return "text/css";
+        case HASH_HTML:
+        case HASH_HTM:	return "text/html";
+        case HASH_RTF:	return "text/rtf";
+        //default:            
     }
-    return "";
+    return "text/plain";
 }
 /*******************************************************************************
 @purpose: Free allocated data for request structure
@@ -210,9 +218,22 @@ Request* parseRequest(char *recvBuff){
         // Parse other parts of request
         if (req->status == R_200_OK)
         {
-            // parse url
-            req->URL = malloc(strlen(url));
-            strcpy(req->URL, url);
+            // PARSE URL
+            // Remove excessive parameters from URL
+            char *pStart, *pEnd;
+            pEnd   = strrchr(url,'#');
+            if (pEnd != NULL) *pEnd = '\0';
+            pEnd   = strrchr(url,'?');
+            if (pEnd != NULL) *pEnd = '\0';
+            
+            pStart = strrchr(url,'/');
+            if (pStart == NULL)          // if not found '/'
+                pStart = url;           // TODO return - bad url
+                
+            // COPY URL
+            req->URL = malloc(strlen(pStart));
+            strcpy(req->URL, pStart);
+                
             
             // parse rest parameters('key: value\n')
             req->lst = initList();
@@ -247,7 +268,7 @@ Request* procRequest(Request* req){
     
     //check URL
     else if (req->URL == NULL) answ->status = R_500_SERVER_ERROR;
-    
+
     answ->version = req->version;
     if ( answ->status == R_200_OK ) // R_200_OK was set as default value, can be changed on errors
     {
@@ -259,7 +280,7 @@ Request* procRequest(Request* req){
         }
         answ->URL = malloc(strlen(tmp));
         strcpy(answ->URL, tmp+1);
-        
+
         // check if file is found
         char *fullPath = malloc(strlen(rootFolder)+strlen(answ->URL)+1);
         strcpy(fullPath, rootFolder);
@@ -284,6 +305,29 @@ Request* procRequest(Request* req){
 
 }
 /*******************************************************************************
+@purpose: generate header for response
+@input: URL
+@return: ready header for appending to response
+*******************************************************************************/
+char* getHeader(char *path)
+{
+    char buff[BUFF_LEN] = {0};
+    char *fullPath = getFullPath(path);
+    snprintf(buff, sizeof(buff), 
+                "Content-Type: %s\n"
+                "Content-Length: %lu\n"
+                "Connection: %s\n",
+                
+                getMimeType(fullPath),
+                getFileSize(fullPath),
+                "close"
+            );
+
+    char *ptr = malloc(strlen(buff) + 1);
+    strcpy(ptr, buff);
+    return ptr;
+}
+/*******************************************************************************
 @purpose: send answer chunk by chunk (if needed)
 @input: connection handle, answer block
 *******************************************************************************/
@@ -299,11 +343,12 @@ long sendAnswer(int connfd, Request* answ){
     else if (answ->URL == NULL) answ->status = R_500_SERVER_ERROR;
 
     //HEADER
+    char *header = getHeader(answ->URL);
     snprintf(sendBuff, sizeof(sendBuff), 
-                "%s %s\n\n", 
+                "%s %s\n%s\n", 
                 HTTPVersionText[answ->version], 
-                ResponseText[answ->status]/*, 
-                (answ->status == R_200_OK ? GetFileMimeType(answ->URL) : "")*/
+                ResponseText[answ->status], 
+                header
             );
     retSize += write(connfd, sendBuff, strlen(sendBuff));
     //\HEADER

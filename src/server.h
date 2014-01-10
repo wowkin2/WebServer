@@ -114,15 +114,32 @@ typedef struct _Request
 
 /**************************************  MIME TYPES  **************************/
 enum mime_types{
-    HASH_HTM,
-    HASH_HTML,
-    HASH_CSS,
-    HASH_JS,
-    HASH_ICO,
-    HASH_PNG,
-    HASH_JPEG,
-    HASH_JPG,
-    HASH_GIF,
+    HASH_DOC  = 193489659,
+    HASH_PDF  = 193502367,
+    HASH_XLS  = 193511356,
+    HASH_PPT  = 193502777,
+    HASH_JS   = 5863522,
+    HASH_SWF  = 193506261,
+    HASH_XML  = 193511382,
+    HASH_ZIP  = 193513432,
+    HASH_MP3  = 193499445,
+    HASH_M3U  = 193497498,
+    HASH_WAV  = 193509907,
+    HASH_BMP  = 193487428,
+    HASH_GIF  = 193492731,
+    HASH_JPEG = 2090408331,
+    HASH_JPG  = 193496230,
+    HASH_PNG  = 193502698,
+    HASH_SVG  = 193506229,
+    HASH_TIFF = 2090760110,
+    HASH_TIF  = 193506888,
+    HASH_DJVU = 2090186750,
+    HASH_DJV  = 193489513,
+    HASH_ICO  = 193494720,
+    HASH_CSS  = 193488718,
+    HASH_HTML = 2090341082,
+    HASH_HTM  = 193494190,
+    HASH_RTF  = 193505073
 };
 /******************************************************************************/
 #endif

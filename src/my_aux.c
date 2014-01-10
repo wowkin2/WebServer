@@ -182,11 +182,11 @@ int getComm(){
 @return: return file size in bytes
 *******************************************************************************/
 unsigned long getFileSize(char *fileName){
-    if (fileName == 0) return -1;
+    if (fileName == NULL) return -1;
     if (strlen(fileName) == 0) return -1;
-    FILE *f = 0;
+    
     long fsize = 0;
-    f = fopen(fileName, "rb");
+    FILE *f = fopen(fileName, "rb");
     fseek(f, 0, SEEK_END);
     fsize = ftell(f);
     fclose(f);
@@ -208,5 +208,15 @@ int fileExists(const char *fpath)
     }
     return 1;
 }
+unsigned long
+getHash(unsigned char *str)
+{
+    unsigned long hash = 5381;
+    int c;
 
+    while (c = *str++)
+        hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+
+    return hash;
+}
 #endif

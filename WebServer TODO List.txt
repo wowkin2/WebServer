@@ -1,0 +1,6 @@
+recvRequest	-	update to recv all data from req.
+procRequest	-	finish full generation of answer
+sendAnswer	-	chunked transfering, check if file_exist
+procConn	-	keep-alive
+log		-	check if file exist (deleted after opening), add mutex
+main		-	add startup parameters (start/stop/restart, check config, install as a service, select IP to listen)
