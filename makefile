@@ -13,9 +13,9 @@ SRC=src/
 all: main
 
 main:
-    $(CC) $(BIN)main $(SRC)main.c
+	$(CC) $(BIN)main $(SRC)main.c
 
 rebuild: clean all
 
 clean:
-    rm -rf *o main
+	rm -rf *o main
