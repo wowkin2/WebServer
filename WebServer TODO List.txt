@@ -1,6 +1,18 @@
-recvRequest	-	update to recv all data from req.
-procRequest	-	finish full generation of answer
-sendAnswer	-	chunked transfering, check if file_exist
-procConn	-	keep-alive
-log		-	check if file exist (deleted after opening), add mutex
-main		-	add startup parameters (start/stop/restart, check config, install as a service, select IP to listen)
+Add posibility to add mime-types from file
+Fix bug that appears when we want open root of some directory, default page is not loading
+Add security for files & folders access (403 Forbidden)
+Add posibility to start / restart / stop server by command 
+Add support of 'Ranges' - posibility to load file in separate threads, continue loading after suspending
+Add posibility to send custom error pages if such are defined in configuration
+?Parse multiple values for one key in parameters (key=value1 value2 value3)
+
+CURRENT PLANS
+To improve:
+-  Performance
+-  Stability
+-  Security
+
+FUTURE PLANS:
+Make posibility to handle virtual hosts (many root directories)
+Implement other types of requests (HEAD, POST)
+Implement using PHP, Python, or even own interpretated or compiled language

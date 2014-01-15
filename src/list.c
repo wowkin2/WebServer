@@ -33,6 +33,10 @@ typedef struct _List
     node* lEnd;
 }List;
 
+/*******************************************************************************
+@purpose: allocate memory for list and set Start and End
+@return: pointer to new list
+*******************************************************************************/
 List *initList()
 {
     List *l = malloc(sizeof(List));
@@ -41,6 +45,8 @@ List *initList()
     return l;
 }
 /*******************************************************************************
+@purpose: add node to list
+@input: pointer to list, pointer to node
 *******************************************************************************/
 void insertNode(List* l, Params *element)
 {
@@ -58,6 +64,8 @@ void insertNode(List* l, Params *element)
     l->lEnd = lNew;
 }
 /*******************************************************************************
+@purpose: free node from memory
+@input: pointer to node
 *******************************************************************************/
 inline void freeNode(node *elem)
 {
@@ -65,10 +73,13 @@ inline void freeNode(node *elem)
     memset(elem->data->val, 0, strlen(elem->data->val));
     free(elem->data->key);
     free(elem->data->val);
+
     memset(elem, 0, sizeof(node));
     free(elem);
 }
 /*******************************************************************************
+@purpose: remove node from list
+@input: pointer to list, pointer to node
 *******************************************************************************/
 void removeNode(List* l, node* lElem)
 {
@@ -104,6 +115,8 @@ void removeNode(List* l, node* lElem)
 
 }
 /*******************************************************************************
+@purpose: remove all nodes from list
+@input: pointer to list
 *******************************************************************************/
 void removeAll(List* l)
 {
@@ -111,14 +124,17 @@ void removeAll(List* l)
     //free(l);
 }
 /*******************************************************************************
+@purpose: find node with some value in list by key
+@input: pointer to list, string with key
+@return: pointer to node
 *******************************************************************************/
 node *getNode(List* l, char *key)
 {
+    if (l == 0)
+        return 0;
     node* list = l->lStart;
     if (list == 0)
-    {
         return 0;
-    }
 
     do
     {
@@ -135,6 +151,9 @@ node *getNode(List* l, char *key)
     return 0;
 }
 /*******************************************************************************
+@purpose: find node with some value in list by key
+@input: pointer to list, string with key
+@return: node value
 *******************************************************************************/
 char *getNodeValue(List* list, char *key)
 {
@@ -142,13 +161,15 @@ char *getNodeValue(List* list, char *key)
     node *tmpNode = getNode(list, key);
     if (tmpNode != 0)
     {
-        string = malloc(strlen(tmpNode->data->val));
+        string = malloc(strlen(tmpNode->data->val)+1);
         strcpy(string, tmpNode->data->val);
         return string;
     }
     return 0;
 }
 /*******************************************************************************
+@purpose: print all members of list
+@input: pointer to list
 *******************************************************************************/
 void printAll(List* list)
 {

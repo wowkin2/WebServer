@@ -5,7 +5,40 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h> 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
+/*******************************************************************************
+@purpose: check if there is a folder by path 
+@input: path
+@return: 1 if folder; 0 if not
+*******************************************************************************/
+char isFolder(char *path)
+{
+    struct stat s;
+    if( stat(path,&s) == 0 )
+    {
+        if( s.st_mode & S_IFDIR )
+        {
+            return 1;
+            //it's a directory
+        }
+        else if( s.st_mode & S_IFREG )
+        {
+            //it's a file
+        }
+        else
+        {
+            //something else
+        }
+    }
+    else
+    {
+        //error
+    }
+    return 0;
+}
 /*******************************************************************************
 @purpose: convert type from string to unsigned integer (string must to start from number)
 @input: string to be converted
@@ -76,7 +109,7 @@ void itoa(int n, char s[])
 @input: full file path
 @return: pointer to byte massive with file content
 *******************************************************************************/
-char* getTempl(char *fileName){
+/*char* getTempl(char *fileName){
     if (fileName == 0) return 0;
     if (strlen(fileName) == 0) return 0;
     
@@ -91,7 +124,7 @@ char* getTempl(char *fileName){
 
     string[fsize] = 0;
     return string;
-}
+}*/
 /*
 int getTempl2(char *fileName, char **outBuff){
     if (fileName == 0) return 0;
@@ -142,21 +175,6 @@ char* getTimeS(){
     strftime (tmpTime, 30, "%d/%h/%G:%T %z", timeinfo);
     return tmpTime;
 }
-/*******************************************************************************
-@purpose: compare N symbols of two strings
-@input: string1, string2 and N of symbols to be compared
-@return: return -1 if equal
-*******************************************************************************/
-int strcmpn(char *ptr1, char *ptr2, int n){
-    int i;
-    for (i = 0; i < n; i++)
-       if (*ptr1 != *ptr2)
-       {
-           printf("%c!=%c\n", *ptr1, *ptr2);
-           return 0;
-       }
-    return -1;
-}
 #ifdef __DEBUG_MODE__
 /*******************************************************************************
 @purpose: Get command from file after each connection
@@ -168,7 +186,7 @@ int getComm(){
     ptrFileIn = fopen("bin/command.txt", "r");
     if (ptrFileIn == NULL) 
     {
-        printf("Can't open command file in!\n");
+        printf("Can't open command file!\n");
         return 1;
     }
     fgets(buff, 255, ptrFileIn);
@@ -187,6 +205,8 @@ unsigned long getFileSize(char *fileName){
     
     long fsize = 0;
     FILE *f = fopen(fileName, "rb");
+    if (f == NULL) 
+        return 0;
     fseek(f, 0, SEEK_END);
     fsize = ftell(f);
     fclose(f);
@@ -208,6 +228,11 @@ int fileExists(const char *fpath)
     }
     return 1;
 }
+/*******************************************************************************
+@purpose: generate hash of string
+@input: string
+@return: unsigned long hash number 
+*******************************************************************************/
 unsigned long
 getHash(unsigned char *str)
 {

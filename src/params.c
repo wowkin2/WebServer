@@ -13,6 +13,25 @@ typedef struct Map
 }Params;
 #include "list.c"           //this include must be after this typedef
 
+char *action_input[] = {
+    "--h",
+    "--help",
+    "--i",
+    "--k",
+  /*"",
+    ""*/
+    "--t",
+};
+typedef enum _ACTION{
+    SHOW_HELP,
+    SHOW_HELP_LONG,
+    SHOW_INTERFACES,
+    SERVER_START,
+  /*SERVER_STOP,      //TODO
+    SERVER_RESTART,*/
+    CHECK_CONFIG,
+    LAST_ACTION
+}ACTION;
 /*******************************************************************************
 @purpose: get integer parameter from list, on error return default value
 @input: list, key for search, default value that returns if key is not set
@@ -52,15 +71,20 @@ int getParamsFromFile(const char*fileName, List *lst, char delimiter)
     char buff[TEMP_BUFF_SIZE] = {0};
     char *ptrDelim;
     unsigned int lineCnt = 0;
+    char ErrBuff[256] = {0};
 
     ptrFileIn = fopen(fileName, "r");
     if (ptrFileIn == NULL) {
-        char ErrBuff[256] = {0};
         snprintf(ErrBuff, sizeof(ErrBuff), 
                 "Could not open '%s'!", fileName);
         puts(ErrBuff);
         logError(ErrBuff);
         return 1;
+    }
+    if (lst == NULL){
+        puts("Error. List is not initialized");
+        logError("Error. List is not initialized");
+        return 3;
     }
 
     while (fgets(buff, TEMP_BUFF_SIZE, ptrFileIn))
@@ -80,7 +104,6 @@ int getParamsFromFile(const char*fileName, List *lst, char delimiter)
             }
             else
             {
-                char ErrBuff[256] = {0};
                 snprintf(ErrBuff, sizeof(ErrBuff), 
                         "There are errors in '%s' at line: %d", fileName, lineCnt + 1);
                 puts("ERROR. Open 'log/error.log' to see more.");
@@ -105,6 +128,11 @@ int getParamsFromString(char *str, List *lst, char delimiter)
     char *ptrDelim = 0;
     unsigned int trimCnt = 0;
 
+    if (lst == NULL){
+        puts("Error. List is not initialized");
+        logError("Error. List is not initialized");
+        return 3;
+    }
     if (str == NULL) {
         return 1;
     }
@@ -122,10 +150,27 @@ int getParamsFromString(char *str, List *lst, char delimiter)
             memcpy(a.key, buff, (ptrDelim - buff));
             *(a.key+(ptrDelim - buff)) = 0;
             strcpy(a.val, ptrDelim+1  + trimCnt); // to skip delimiter and spaces
+
             insertNode(lst, &a);
         }
         buff = strtok(NULL, "\n");
     }
     return 0;
+}
+/*******************************************************************************
+@purpose: get command-line string parameters and choise one to execute
+@input: command-line parameters
+@return: number of action to be done
+*******************************************************************************/
+ACTION getStartupParams(int argc, char *argv[])
+{
+    int i;
+    if (argc == 2)
+    {
+        for(i=1; i<LAST_ACTION; i++)
+            if (strcmp(argv[1], action_input[i]) == 0)
+                return i;
+    }
+    return SHOW_HELP;
 }
 #endif

@@ -9,24 +9,24 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-int main(int argc, char *argv[])
+/*int main(int argc, char *argv[])
 {
     printInterfaces();
-}
+}*/
 
 /*******************************************************************************
 @purpose: to show available interfaces (ip-addresses)
 @return: 0 if everything is ok
 *******************************************************************************/
-int printInterfaces()
+void printInterfaces()
 {
     struct ifaddrs *ifaddr, *ifa;
     int family, s;
     char host[NI_MAXHOST];
 
     if (getifaddrs(&ifaddr) == -1) {
-        return 1;   //perror("getifaddrs");
-        //exit(EXIT_FAILURE);
+        puts("Error in call getifaddrs().");
+        return;
     }
 
     puts("\nAvailable interfaces:");
@@ -57,12 +57,12 @@ int printInterfaces()
                     host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
             if (s != 0) {
                 printf("getnameinfo() failed: %s\n", gai_strerror(s));
-                return 2;   //exit(EXIT_FAILURE);
+                return;
             }
             printf("\t%s\n", host);
         }
     }
     freeifaddrs(ifaddr);
-    return 0;
+    return;
 }
 #endif

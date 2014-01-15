@@ -25,11 +25,11 @@
 #define UCHAR unsigned char
 
 #define BUFF_LEN 1025
-#define CHUNK_SIZE 1025
 
-#define RECV_TIMEOUT 10         // wait x-seconds any connections, else continue
+#define CHUNK_SIZE 1025         // size of one chunk
+#define ACCEPT_TIMEOUT 10       // wait x-seconds any connections, else continue
 #define KEEP_ALIVE_TIMEOUT 5    // wait x-seconds any requests to dedicated socket, else close socket
-
+#define MAX_URL_LEN 255         // max size of url (err.code 414)
 /**************************************  HTTP STATUS CODE  ********************/
 const char *ResponseText[] = {
 // 1xx: Informational
@@ -99,47 +99,111 @@ typedef struct _Request
 {
     RequestMethod method; // GET
     char* URL;            // /index.htm
-    UCHAR version;        // HTTP/1.x
-    ResponseStatus status;// OK
+    UCHAR version;        // HTTP/x.x
+    ResponseStatus status;// 200 OK
     
     void* lst;            // pointer to 'List' type (void because List is undefined here)
                           // key: value
                           // Host: localhost.com
-                          // Connection: Keep-Alive/Closed
+                          // Connection: Keep-Alive/closed
                           // Ranges: 
     //CRLF+CRLF
-    char* data; //or
-    char* filePath;
+    char* data;        //some data
 }Request;
 
 /**************************************  MIME TYPES  **************************/
-enum mime_types{
-    HASH_DOC  = 193489659,
-    HASH_PDF  = 193502367,
-    HASH_XLS  = 193511356,
-    HASH_PPT  = 193502777,
-    HASH_JS   = 5863522,
-    HASH_SWF  = 193506261,
-    HASH_XML  = 193511382,
-    HASH_ZIP  = 193513432,
-    HASH_MP3  = 193499445,
-    HASH_M3U  = 193497498,
-    HASH_WAV  = 193509907,
-    HASH_BMP  = 193487428,
-    HASH_GIF  = 193492731,
-    HASH_JPEG = 2090408331,
-    HASH_JPG  = 193496230,
-    HASH_PNG  = 193502698,
-    HASH_SVG  = 193506229,
-    HASH_TIFF = 2090760110,
-    HASH_TIF  = 193506888,
-    HASH_DJVU = 2090186750,
-    HASH_DJV  = 193489513,
-    HASH_ICO  = 193494720,
-    HASH_CSS  = 193488718,
-    HASH_HTML = 2090341082,
-    HASH_HTM  = 193494190,
-    HASH_RTF  = 193505073
+// TODO dynamic reading them from file
+char *mimeText[] = {
+    "text/plain",
+    "application/msword",
+    "application/pdf",
+    "application/vnd.ms-excel",
+    "application/vnd.ms-powerpoint",
+    "application/x-javascript",
+    "application/x-shockwave-flash",
+    "application/xml",
+    "application/zip",
+    "audio/mpeg",
+    "audio/x-mpegurl",
+    "audio/x-wav",
+    "image/bmp",
+    "image/gif",
+    "image/jpeg",
+    "image/jpeg",
+    "image/png",
+    "image/svg+xml",
+    "image/tiff",
+    "image/tiff",
+    "image/vnd.djvu",
+    "image/vnd.djvu",
+    "image/x-icon",
+    "text/css",
+    "text/html",
+    "text/html",
+    "text/rtf",
+    //last
+};
+unsigned long mimeHash[] = {
+    0,
+    193489659,
+    193502367,
+    193511356,
+    193502777,
+      5863522,
+    193506261,
+    193511382,
+    193513432,
+    193499445,
+    193497498,
+    193509907,
+    193487428,
+    193492731,
+   2090408331,
+    193496230,
+    193502698,
+    193506229,
+   2090760110,
+    193506888,
+   2090186750,
+    193489513,
+    193494720,
+    193488718,
+   2090341082,
+    193494190,
+    193505073,
+    //0
+};
+enum mimeType{
+    HASH_DEFAULT,
+    HASH_DOC,
+    HASH_PDF,
+    HASH_XLS,
+    HASH_PPT,
+    HASH_JS,
+    HASH_SWF,
+    HASH_XML,
+    HASH_ZIP,
+    HASH_MP3,
+    HASH_M3U,
+    HASH_WAV,
+    HASH_BMP,
+    HASH_GIF,
+    HASH_JPEG,
+    HASH_JPG,
+    HASH_PNG,
+    HASH_SVG,
+    HASH_TIFF,
+    HASH_TIF,
+    HASH_DJVU,
+    HASH_DJV,
+    HASH_ICO,
+    HASH_CSS,
+    HASH_HTML,
+    HASH_HTM,
+    HASH_RTF,
+    
+    // used for loop processing
+    HASH_LAST
 };
 /******************************************************************************/
 #endif

@@ -3,24 +3,58 @@
 #include <netinet/in.h> 
 #include "server.c"
 #include "params.c"
-
+#include "interfaces.c"
 extern char *defaultPage;
 extern char *rootFolder;
 
+void printInterfaces();
+void checkConfiguration();
+int InitServer();
 /*******************************************************************************
 @purpose: START POINT
 *******************************************************************************/
 int main(int argc, char *argv[])
 {
+    switch(getStartupParams(argc, argv))
+    {
+    case SHOW_INTERFACES:
+            printInterfaces();
+            break;
+    case SERVER_START:
+            InitServer();
+            break;
+   /*case SERVER_STOP:      //TODO
+            break;
+    case SERVER_RESTART:
+            break;*/
+    case CHECK_CONFIG:
+            checkConfiguration();
+            break;
+        case SHOW_HELP:
+        case SHOW_HELP_LONG:
+    default:
+            printf("\tUsage:\n"
+                   "\t--i    get available interfaces\n"
+                   "\t--t    check configuration\n"
+                   "\t--k    to start webserver\n"
+                   "\t--h    print this text\n");
+            return 0;
+    }
+}
+void checkConfiguration(){
+    List *lstConf = initList();
+    if (0 != getParamsFromFile("conf/httpd.conf", lstConf, '='))
+    {
+        puts("Could not read configuration file...");
+    }else{
+        puts("Configuration file 'conf/httpd.conf' is OK.");
+    }
+    removeAll(lstConf);
+}
+int InitServer()
+{
     char ErrBuff[256] = {0};
     FILE* fileLogTmp;
-    //##############  PRINT USAGE  ###############
-    //--i (get available interfaces)
-    //--t (check configuration)
-    //--k start/stop/restart (...)
-    //
-    
-    
     //##############  CONFIGURATE SERVER  ###############
     
     // Read parameters from 'conf/httpd.conf' to list
@@ -63,7 +97,7 @@ int main(int argc, char *argv[])
         logError(ErrBuff);
     }
     // Free data with configuration from memory
-    removeAll(lstConf);     
+    removeAll(lstConf);
     
     //#############  START SERVER  ###############
 
@@ -87,49 +121,47 @@ int main(int argc, char *argv[])
         while(1)
         {
             // Wait few second, if there's no connections - continue
-            if (wait4Accept(listenSocket) > 0)
+            if (wait4Socket(listenSocket, ACCEPT_TIMEOUT) > 0)
             {
                 connSocket = accept( listenSocket, ( struct sockaddr* )&saddr, &len );
-            }
-            if ( listenSocket < 0 ) {
-                logError("Accept Error...");
-                close(listenSocket);
-                break;
-            }
-            
-            child_pid = fork ();
-            if (child_pid == 0)     //####  child thread  ####
-            {
-                #ifndef __DEBUG_MODE__
-                close (STDIN_FILENO);     //child don't need to print anything,
-                close (STDOUT_FILENO);    //  so close input/output streams
-                #endif
-                close (listenSocket);       //close a child-copy of listening port
-                
-                //TODO need to check
-                if ( inet_ntop( AF_INET, &saddr.sin_addr, IP_Buff, INET_ADDRSTRLEN ) == NULL )
-                {
-                    logError("Can't convert IP addr");
-                    close(connSocket);
-                    exit(1);
-                }
-                procConn(IP_Buff, connSocket);
-                
-                exit (0);       // close child process
-            }
-            else if (child_pid > 0) // ####  parent thread  ####
-            {
-                
-                close (connSocket);
-                #ifdef __DEBUG_MODE__
-                if (getComm() == 0) //DEBUG FEATURE
-                {
+                if ( listenSocket < 0 ) {
+                    logError("Accept Error...");
                     break;
                 }
-                #endif
+                
+                child_pid = fork ();
+                if (child_pid == 0)     //####  child thread  ####
+                {
+                    #ifndef __DEBUG_MODE__
+                    close (STDIN_FILENO);     //child don't need to print anything,
+                    close (STDOUT_FILENO);    //  so close input/output streams
+                    #endif
+                    close (listenSocket);       //close a child-copy of listening port
+                    
+                    if ( inet_ntop( AF_INET, &saddr.sin_addr, IP_Buff, INET_ADDRSTRLEN ) == NULL )
+                    {
+                        logError("Can't convert IP addr");
+                        close(connSocket);
+                        exit(1);
+                    }
+                    procConn(IP_Buff, connSocket);
+                    
+                    exit (0);       // close child process
+                }
+                else if (child_pid > 0) // ####  parent thread  ####
+                {
+                    
+                    close (connSocket);
+                    #ifdef __DEBUG_MODE__
+                    if (getComm() == 0)
+                    {
+                        break;
+                    }
+                    #endif
+                }
+                else
+                    logError("Can't fork");     // if can't create child
             }
-            else
-                logError("Can't fork");     // if can't create child
         }
         close(listenSocket);    // close parent listenSocket
 
